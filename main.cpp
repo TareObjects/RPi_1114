@@ -1,5 +1,20 @@
+//  RPi1114 firmware
+//
+//  TareObjects - koichi kurahashi
+//
+//  ver 1.00 2017-01-16 first version
+//      1.01 2017-01-17 fix bugs : led on when analog read command
+//                                 bad analog channel boudary
+//                                 
+//
+
+
+
 #include "mbed.h"
 
+
+
+const unsigned short version = 0x0101; //  ver 1.01
 
 const int   kMaxInteger      = 32767;
 const float fFloatScaleValue = 1024.0;  // factor to convert long <-> float
@@ -59,6 +74,8 @@ const float fFloatScaleValue = 1024.0;  // factor to convert long <-> float
 //  endian : little endian
 //
 
+#define kCommandVersion     0x00    //              : get version number ver 1.01
+
 #define kCommandUp          0x10    //  i2c command : RPi power on
 #define kCommandDown        0x11    //              : RPi power off
 
@@ -76,6 +93,7 @@ const float fFloatScaleValue = 1024.0;  // factor to convert long <-> float
 #define kCommandDigitalIn   0x50    //              : input  digital
 
 #define kCommandDigitalOut  0x60    //              : output digital
+
 
 
 #define kCommandModeBinary  0x00    //  binary mode
@@ -227,7 +245,7 @@ void analogTickerVector2()
 
 float execAnalogIn(int ch)
 {
-    if (ch >= 0 && kMaxAnalogChannels) {
+    if (ch >= 0 && ch < kMaxAnalogChannels) {   // fix ver 1.01
         return analogIn[ch];
     }
     return -1;
@@ -501,7 +519,7 @@ int main()
                         case kCommandDigitalIn:
                         case kCommandAnalogRead:
                         case kCommandAnalogLoad:
-                            ledOn();
+                        case kCommandVersion:           //  ver 1.01
                             prevCommand = command;
                             prevCh      = ch;
                             prevMode    = mode;
@@ -550,6 +568,10 @@ int main()
                             sprintf(strBuf, "%ld", value);
                             slave.write((const char *)strBuf, strlen(strBuf)+1);
                         }
+                        break;
+                        
+                    case kCommandVersion:                                       // ver 1.01
+                        slave.write((const char *)&version, sizeof(version));
                         break;
                 }
                 slave.stop();
